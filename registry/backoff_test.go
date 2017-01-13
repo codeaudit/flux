@@ -7,35 +7,67 @@ import (
 	"time"
 )
 
-func TestRateLimitedRoundTripper_OnlyAllowsMaxRequestsPerSecondToARegistry(t *testing.T) {
+func TestRateLimitedRoundTripper_BacksOffPerHostAndCredentialsWhenRateLimited(t *testing.T) {
 	t.Parallel()
 	// It should only allow max requests/second to a registry
+	startTime := time.Now()
+	var offset time.Duration
+	now = func() time.Time { return startTime.Add(offset) }
 	requests := []time.Time{}
-	var rt http.RoundTripper = roundtripperFunc(func(r *http.Request) (*http.Response, error) {
-		requests = append(requests, time.Now())
-		return nil, nil
-	})
-	host := "example.local"
 	limit := 3
-	rt = HostRateLimitedRoundTripper(rt, 0, map[string]int{host: limit})
-	for i := 0; i < limit+2; i++ {
+	var rt http.RoundTripper = roundtripperFunc(func(r *http.Request) (*http.Response, error) {
+		requests = append(requests, now())
+		if len(requests) < limit {
+			offset += len(requests) * time.Millisecond
+			return &http.Response{
+				Status:     "429 Too Many Requests",
+				StatusCode: http.StatusTooManyRequests,
+			}, nil
+		}
+		return &http.Response{
+			Status:     "200 OK",
+			StatusCode: http.StatusOK,
+		}, nil
+	})
+	username, password, host := "user1", "pa55word", "example.local"
+	rt = HostRateLimitedRoundTripper(rt, 1*time.Millisecond, 1*time.Second)
+	for i := 0; i < limit+1; i++ {
 		request, err := http.NewRequest("GET", "http://"+host+"/image/foo", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
+		request.SetBasicAuth(username, password)
 		_, err = rt.RoundTrip(request)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	buckets := map[int64]int{}
-	for _, ts := range requests {
-		buckets[ts.Unix()]++
-		if buckets[ts.Unix()] > 3 {
-			t.Error("Too many requests/second to " + host)
+	if len(requests) != limit+1 {
+		t.Errorf("Expected %d requests, got %d", limit+1, len(requests))
+	}
+
+	for i, reqTime := range []time.Time{
+		startTime,
+		startTime.Add(1 * time.Millisecond),
+		startTime.Add(2 * time.Millisecond),
+		startTime.Add(2 * time.Millisecond),
+		startTime.Add(2 * time.Millisecond),
+	} {
+		if !requests[i].Equal(reqTime) {
+			t.Errorf("Expected requests[%d] to equal: %v, got %v", i, reqTime, requests[i])
 		}
 	}
+}
+
+func TestRateLimitedRoundTripper_UncredentialedRequestsBackOffPerHostWhenRateLimited(t *testing.T) {
+	t.Parallel()
+	t.Error("TODO")
+}
+
+func TestRateLimitedRoundTripper_StopsBackoffAtMax(t *testing.T) {
+	t.Parallel()
+	t.Error("TODO")
 }
 
 func TestRateLimitedRoundTripper_DifferentHostsEnforcedSeparately(t *testing.T) {
@@ -86,7 +118,7 @@ func TestRateLimitedRoundTripper_DifferentHostsEnforcedSeparately(t *testing.T) 
 	}
 }
 
-func TestRateLimitedRoundTripper_BacklogTooHigh(t *testing.T) {
+func TestRateLimitedRoundTripper_Timeout(t *testing.T) {
 	t.Parallel()
 	// If the backlog is too high, an error should be returned.
 	var rt http.RoundTripper = roundtripperFunc(func(r *http.Request) (*http.Response, error) {
