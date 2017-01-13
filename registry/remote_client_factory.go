@@ -46,7 +46,7 @@ func (f *remoteClientFactory) Create(id image.ImageID) (_ RemoteClient, err erro
 	if err != nil {
 		return
 	}
-	return newRemoteClient(client, cancel)
+	return newRemoteClient(client, cancel), nil
 }
 
 func newRegistryClient(host string, creds Credentials) (client *dockerregistry.Registry, cancel context.CancelFunc, err error) {

@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"encoding/json"
+	manifest "github.com/docker/distribution/manifest/schema1"
 	dockerregistry "github.com/heroku/docker-registry-client/registry"
 	"github.com/weaveworks/flux"
 	"github.com/weaveworks/flux/registry/images"
@@ -16,15 +17,15 @@ type RemoteClient interface {
 }
 
 type remoteClient struct {
-	client *dockerregistry.Registry
+	client dockerRegistryInterface
 	cancel context.CancelFunc
 }
 
-func newRemoteClient(client *dockerregistry.Registry, cancel context.CancelFunc) (_ RemoteClient, err error) {
+func newRemoteClient(client *dockerregistry.Registry, cancel context.CancelFunc) RemoteClient {
 	return &remoteClient{
 		client: client,
 		cancel: cancel,
-	}, nil
+	}
 }
 
 func (rc *remoteClient) Tags(id image.ImageID) (_ []string, err error) {
@@ -58,4 +59,10 @@ func (rc *remoteClient) Manifest(id image.ImageID) (flux.ImageDescription, error
 
 func (rc *remoteClient) Cancel() {
 	rc.cancel()
+}
+
+// We need this because they didn't wrap it in an interface.
+type dockerRegistryInterface interface {
+	Tags(repository string) ([]string, error)
+	Manifest(repository, reference string) (*manifest.SignedManifest, error)
 }
