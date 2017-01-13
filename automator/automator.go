@@ -11,6 +11,7 @@ import (
 	"github.com/weaveworks/flux/instance"
 	"github.com/weaveworks/flux/jobs"
 	"github.com/weaveworks/flux/platform"
+	"github.com/weaveworks/flux/registry/images"
 	"github.com/weaveworks/flux/release"
 )
 
@@ -133,7 +134,7 @@ func (a *Automator) handleAutomatedInstanceJob(logger log.Logger, j *jobs.Job) (
 	images := instance.ImageMap{}
 	for _, service := range services {
 		for _, container := range service.ContainersOrNil() {
-			repo := flux.ParseImageID(container.Image).Repository()
+			repo := image.ParseImageID(container.Image).Repository()
 			images[repo] = nil
 		}
 	}
@@ -148,7 +149,7 @@ func (a *Automator) handleAutomatedInstanceJob(logger log.Logger, j *jobs.Job) (
 
 	// Calculate which services need releasing.
 	updateMap := release.CalculateUpdates(services, images, func(format string, args ...interface{}) { /* noop */ })
-	releases := map[flux.ImageID]flux.ServiceIDSet{}
+	releases := map[image.ImageID]flux.ServiceIDSet{}
 	for serviceID, updates := range updateMap {
 		for _, update := range updates {
 			if releases[update.Target] == nil {

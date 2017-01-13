@@ -7,6 +7,7 @@ import (
 
 	"github.com/weaveworks/flux"
 	fluxmetrics "github.com/weaveworks/flux/metrics"
+	"github.com/weaveworks/flux/registry/images"
 )
 
 type RegistryMonitoringMiddleware func(Client) Client
@@ -50,10 +51,10 @@ type RemoteMonitoringMiddleware func(Remote) Remote
 type remoteMonitoringMiddleware struct {
 	next    Remote
 	metrics Metrics
-	id      flux.ImageID
+	id      image.ImageID
 }
 
-func NewRemoteMonitoringMiddleware(metrics Metrics, id flux.ImageID) RemoteMonitoringMiddleware {
+func NewRemoteMonitoringMiddleware(metrics Metrics, id image.ImageID) RemoteMonitoringMiddleware {
 	return func(next Remote) Remote {
 		return &remoteMonitoringMiddleware{
 			next:    next,

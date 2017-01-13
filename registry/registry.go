@@ -4,6 +4,7 @@ package registry
 import (
 	"github.com/go-kit/kit/log"
 	"github.com/weaveworks/flux"
+	"github.com/weaveworks/flux/registry/images"
 	"sort"
 )
 
@@ -38,7 +39,7 @@ func NewClient(c RemoteClientFactory, l log.Logger, m Metrics) Client {
 //   quay.io/foo/helloworld -> quay.io/foo/helloworld
 //
 func (c *client) GetRepository(repository string) (_ []flux.ImageDescription, err error) {
-	id := flux.ParseImageID(repository)
+	id := image.ParseImageID(repository)
 	remoteClient, err := c.factory.Create(id)
 	if err != nil {
 		return
@@ -65,7 +66,7 @@ func (c *client) GetRepository(repository string) (_ []flux.ImageDescription, er
 
 // Get a single image from the registry if it exists
 func (c *client) GetImage(repoImageTag string) (_ flux.ImageDescription, err error) {
-	id := flux.ParseImageID(repoImageTag)
+	id := image.ParseImageID(repoImageTag)
 	remoteClient, err := c.factory.Create(id)
 	if err != nil {
 		return

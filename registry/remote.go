@@ -4,6 +4,7 @@ package registry
 import (
 	"github.com/go-kit/kit/log"
 	"github.com/weaveworks/flux"
+	"github.com/weaveworks/flux/registry/images"
 	"net/http"
 )
 
@@ -16,13 +17,13 @@ type Remote interface {
 }
 
 type remote struct {
-	id      flux.ImageID
+	id      image.ImageID
 	client  RemoteClient
 	logger  log.Logger
 	metrics Metrics
 }
 
-func NewRemote(r RemoteClient, id flux.ImageID, l log.Logger, m Metrics) Remote {
+func NewRemote(r RemoteClient, id image.ImageID, l log.Logger, m Metrics) Remote {
 	return &remote{
 		client:  r,
 		id:      id,

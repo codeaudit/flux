@@ -11,10 +11,10 @@ spec:
     spec:
       containers:
       - name: fluxd
-        image: weaveworks/fluxd:test
+        image: quay.io/weaveworks/fluxd:master-6cc08e4
         args:
         - --fluxsvc-address=ws://localhost:3030
       - name: fluxsvc
-        image: weaveworks/fluxsvc:test
+        image: quay.io/weaveworks/fluxsvc:master-6cc08e4
         args:
         - --database-source=file://fluxy.db

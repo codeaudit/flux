@@ -15,6 +15,7 @@ import (
 	fluxmetrics "github.com/weaveworks/flux/metrics"
 	"github.com/weaveworks/flux/platform"
 	"github.com/weaveworks/flux/registry"
+	"github.com/weaveworks/flux/registry/images"
 )
 
 type Instancer interface {
@@ -101,7 +102,7 @@ func (h *Instance) CollectAvailableImages(services []platform.Service) (ImageMap
 	images := ImageMap{}
 	for _, service := range services {
 		for _, container := range service.ContainersOrNil() {
-			repo := flux.ParseImageID(container.Image).Repository()
+			repo := image.ParseImageID(container.Image).Repository()
 			images[repo] = nil
 		}
 	}
@@ -122,7 +123,7 @@ func (h *Instance) GetRepository(repo string) ([]flux.ImageDescription, error) {
 
 // Create an image map containing exact images. At present this
 // assumes they exist; but it may in the future be made to verify so.
-func (h *Instance) ExactImages(images []flux.ImageID) (ImageMap, error) {
+func (h *Instance) ExactImages(images []image.ImageID) (ImageMap, error) {
 	m := ImageMap{}
 	for _, id := range images {
 		// We must check that the exact images requested actually exist. Otherwise we risk pushing invalid images to git.
@@ -140,7 +141,7 @@ func (h *Instance) ExactImages(images []flux.ImageID) (ImageMap, error) {
 
 // Checks whether the given image exists in the repository.
 // Return true if exist, false otherwise
-func (h *Instance) imageExists(image flux.ImageID) (bool, error) {
+func (h *Instance) imageExists(image image.ImageID) (bool, error) {
 	// Get a list of images
 	desc, err := h.registry.GetImage(string(image))
 	if err != nil {

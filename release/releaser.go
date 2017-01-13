@@ -18,6 +18,7 @@ import (
 	fluxmetrics "github.com/weaveworks/flux/metrics"
 	"github.com/weaveworks/flux/platform"
 	"github.com/weaveworks/flux/platform/kubernetes"
+	"github.com/weaveworks/flux/registry/images"
 )
 
 const FluxServiceName = "fluxsvc"
@@ -272,7 +273,7 @@ func CalculateUpdates(services []platform.Service, images instance.ImageMap, pri
 			continue
 		}
 		for _, container := range containers {
-			currentImageID := flux.ParseImageID(container.Image)
+			currentImageID := image.ParseImageID(container.Image)
 			latestImage := images.LatestImage(currentImageID.Repository())
 			if latestImage == nil {
 				continue
@@ -297,8 +298,8 @@ func CalculateUpdates(services []platform.Service, images instance.ImageMap, pri
 
 type ContainerUpdate struct {
 	Container string
-	Current   flux.ImageID
-	Target    flux.ImageID
+	Current   image.ImageID
+	Target    image.ImageID
 }
 
 // ReleaseAction Do funcs

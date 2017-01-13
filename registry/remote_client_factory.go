@@ -15,6 +15,7 @@ import (
 	"golang.org/x/net/publicsuffix"
 
 	"github.com/weaveworks/flux"
+	"github.com/weaveworks/flux/registry/images"
 )
 
 type creds struct {
@@ -27,7 +28,7 @@ type Credentials struct {
 }
 
 type RemoteClientFactory interface {
-	Create(id flux.ImageID) (RemoteClient, error)
+	Create(id image.ImageID) (RemoteClient, error)
 }
 
 func NewRemoteClientFactory(c Credentials) RemoteClientFactory {
@@ -40,7 +41,7 @@ type remoteClientFactory struct {
 	creds Credentials
 }
 
-func (f *remoteClientFactory) Create(id flux.ImageID) (_ RemoteClient, err error) {
+func (f *remoteClientFactory) Create(id image.ImageID) (_ RemoteClient, err error) {
 	client, cancel, err := newRegistryClient(id.Host(), f.creds)
 	if err != nil {
 		return

@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	dockerregistry "github.com/heroku/docker-registry-client/registry"
 	"github.com/weaveworks/flux"
+	"github.com/weaveworks/flux/registry/images"
 	"time"
 )
 
 type RemoteClient interface {
-	Tags(id flux.ImageID) ([]string, error)
-	Manifest(id flux.ImageID) (flux.ImageDescription, error)
+	Tags(id image.ImageID) ([]string, error)
+	Manifest(id image.ImageID) (flux.ImageDescription, error)
 	Cancel()
 }
 
@@ -26,11 +27,11 @@ func newRemoteClient(client *dockerregistry.Registry, cancel context.CancelFunc)
 	}, nil
 }
 
-func (rc *remoteClient) Tags(id flux.ImageID) (_ []string, err error) {
+func (rc *remoteClient) Tags(id image.ImageID) (_ []string, err error) {
 	return rc.client.Tags(id.Name())
 }
 
-func (rc *remoteClient) Manifest(id flux.ImageID) (flux.ImageDescription, error) {
+func (rc *remoteClient) Manifest(id image.ImageID) (flux.ImageDescription, error) {
 	_, lookupName, tag := id.Components()
 	img := flux.ImageDescription{ID: id}
 	meta, err := rc.client.Manifest(lookupName, tag)

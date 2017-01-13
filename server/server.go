@@ -18,6 +18,7 @@ import (
 	fluxmetrics "github.com/weaveworks/flux/metrics"
 	"github.com/weaveworks/flux/platform"
 	"github.com/weaveworks/flux/registry"
+	"github.com/weaveworks/flux/registry/images"
 )
 
 const (
@@ -149,7 +150,7 @@ func containers2containers(cs []platform.Container) []flux.Container {
 		res[i] = flux.Container{
 			Name: c.Name,
 			Current: flux.ImageDescription{
-				ID: flux.ParseImageID(c.Image),
+				ID: image.ParseImageID(c.Image),
 			},
 		}
 	}
@@ -198,7 +199,7 @@ func (s *Server) ListImages(inst flux.InstanceID, spec flux.ServiceSpec) (res []
 
 func containersWithAvailable(service platform.Service, images instance.ImageMap) (res []flux.Container) {
 	for _, c := range service.ContainersOrNil() {
-		id := flux.ParseImageID(c.Image)
+		id := image.ParseImageID(c.Image)
 		repo := id.Repository()
 		available := images[repo]
 		res = append(res, flux.Container{

@@ -3,6 +3,7 @@ package instance
 import (
 	"github.com/weaveworks/flux"
 	"github.com/weaveworks/flux/registry"
+	"github.com/weaveworks/flux/registry/images"
 	"testing"
 	"time"
 )
@@ -12,7 +13,7 @@ var (
 	exampleImage = "owner/repo:tag"
 	testRegistry = registry.NewMockRegistry([]flux.ImageDescription{
 		{
-			ID:        flux.ParseImageID(exampleImage),
+			ID:        image.ParseImageID(exampleImage),
 			CreatedAt: &fixedTime,
 		},
 	}, nil)
@@ -28,10 +29,10 @@ func TestSomething(t *testing.T) {
 	testImageExists(t, i, "", false)
 }
 
-func testImageExists(t *testing.T, i Instance, image string, expected bool) {
-	b, err := i.imageExists(flux.ParseImageID(image))
+func testImageExists(t *testing.T, i Instance, img string, expected bool) {
+	b, err := i.imageExists(image.ParseImageID(img))
 	if err != nil {
-		t.Fatalf("%v: error when requesting image %q", err.Error(), image)
+		t.Fatalf("%v: error when requesting image %q", err.Error(), img)
 	}
 	if b != expected {
 		t.Fatalf("Expected exist = %q but got %q", expected, b)

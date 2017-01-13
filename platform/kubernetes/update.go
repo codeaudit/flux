@@ -3,11 +3,10 @@ package kubernetes
 import (
 	"bytes"
 	"fmt"
+	"github.com/weaveworks/flux/registry/images"
 	"io"
 	"regexp"
 	"strings"
-
-	"github.com/weaveworks/flux"
 )
 
 // UpdatePodController takes the body of a ReplicationController or Deployment
@@ -68,7 +67,7 @@ func UpdatePodController(def []byte, newImageName string, trace io.Writer) ([]by
 //         - containerPort: 80
 // ```
 func tryUpdate(def, newImageStr string, trace io.Writer, out io.Writer) error {
-	newImage := flux.ParseImageID(newImageStr)
+	newImage := image.ParseImageID(newImageStr)
 
 	nameRE := multilineRE(
 		`metadata:\s*`,
@@ -94,7 +93,7 @@ func tryUpdate(def, newImageStr string, trace io.Writer, out io.Writer) error {
 		return fmt.Errorf("Could not find image name")
 	}
 	containerName := matches[1]
-	oldImage := flux.ParseImageID(matches[2])
+	oldImage := image.ParseImageID(matches[2])
 	fmt.Fprintf(trace, "Found container %q using image %v in fragment:\n\n%s\n\n", containerName, oldImage, matches[0])
 
 	if oldImage.Repository() != newImage.Repository() {

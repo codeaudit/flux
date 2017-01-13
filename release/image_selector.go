@@ -6,6 +6,7 @@ import (
 	"github.com/weaveworks/flux"
 	"github.com/weaveworks/flux/instance"
 	"github.com/weaveworks/flux/platform"
+	"github.com/weaveworks/flux/registry/images"
 )
 
 type ImageSelector interface {
@@ -20,8 +21,8 @@ func ImageSelectorForSpec(spec flux.ImageSpec) ImageSelector {
 	case flux.ImageSpecNone:
 		return LatestConfig
 	default:
-		return ExactlyTheseImages([]flux.ImageID{
-			flux.ParseImageID(string(spec)),
+		return ExactlyTheseImages([]image.ImageID{
+			image.ParseImageID(string(spec)),
 		})
 	}
 }
@@ -55,7 +56,7 @@ var (
 	}
 )
 
-func ExactlyTheseImages(images []flux.ImageID) ImageSelector {
+func ExactlyTheseImages(images []image.ImageID) ImageSelector {
 	var imageText []string
 	for _, image := range images {
 		imageText = append(imageText, string(image))
