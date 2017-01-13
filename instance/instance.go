@@ -140,20 +140,17 @@ func (h *Instance) ExactImages(images []flux.ImageID) (ImageMap, error) {
 
 // Checks whether the given image exists in the repository.
 // Return true if exist, false otherwise
-func (h *Instance) imageExists(image flux.ImageID) (exists bool, err error) {
+func (h *Instance) imageExists(image flux.ImageID) (bool, error) {
 	// Get a list of images
-	images, err := h.registry.GetRepository(image.Repository())
+	desc, err := h.registry.GetImage(string(image))
 	if err != nil {
-		return
+		return false, err
 	}
 	// See if that image exists
-	for _, desc := range images {
-		if desc.ID == image {
-			exists = true
-			return
-		}
+	if desc.ID == image {
+		return true, err
 	}
-	return
+	return false, nil
 }
 
 func (h *Instance) PlatformApply(defs []platform.ServiceDefinition) (err error) {

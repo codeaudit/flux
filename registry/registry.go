@@ -39,6 +39,7 @@ type Credentials struct {
 // Client is a handle to a bunch of registries.
 type Client interface {
 	GetRepository(repository string) ([]flux.ImageDescription, error)
+	GetImage(repository string) (flux.ImageDescription, error)
 }
 
 // client is a handle to a registry.
@@ -79,55 +80,14 @@ func (c *client) GetRepository(repository string) (_ []flux.ImageDescription, er
 		).Observe(time.Since(start).Seconds())
 	}(time.Now())
 
-	var host, org, image string
-	parts := strings.Split(repository, "/")
-	switch len(parts) {
-	case 1:
-		host = dockerHubHost
-		org = dockerHubLibrary
-		image = parts[0]
-	case 2:
-		host = dockerHubHost
-		org = parts[0]
-		image = parts[1]
-	case 3:
-		host = parts[0]
-		org = parts[1]
-		image = parts[2]
-	default:
-		return nil, fmt.Errorf(`expected image name as either "<host>/<org>/<image>", "<org>/<image>", or "<image>"`)
-	}
-
-	hostlessImageName := fmt.Sprintf("%s/%s", org, image)
-	httphost := "https://" + host
-
-	// quay.io wants us to use cookies for authorisation, so we have
-	// to construct one (the default client has none). This means a
-	// bit more constructing things to be able to make a registry
-	// client literal, rather than calling .New()
-	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
+	host, hostlessImageName, err := c.parseHost(repository)
 	if err != nil {
 		return nil, err
 	}
-	auth := c.Credentials.credsFor(host)
 
-	// A context we'll use to cancel requests on error
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// Use the wrapper to fix headers for quay.io, and remember bearer tokens
-	var transport http.RoundTripper = &wwwAuthenticateFixer{transport: http.DefaultTransport}
-	// Now the auth-handling wrappers that come with the library
-	transport = dockerregistry.WrapTransport(transport, httphost, auth.username, auth.password)
-
-	client := &dockerregistry.Registry{
-		URL: httphost,
-		Client: &http.Client{
-			Transport: roundtripperFunc(func(r *http.Request) (*http.Response, error) {
-				return transport.RoundTrip(r.WithContext(ctx))
-			}),
-			Jar: jar,
-		},
-		Logf: dockerregistry.Quiet,
+	client, cancel, err := c.newRegistryClient(host)
+	if err != nil {
+		return nil, err
 	}
 
 	start := time.Now()
@@ -148,6 +108,91 @@ func (c *client) GetRepository(repository string) (_ []flux.ImageDescription, er
 	// want the results to use the *actual* name of the images to be
 	// as supplied, e.g., `nats`.
 	return c.tagsToRepository(cancel, client, hostlessImageName, repository, tags)
+}
+
+// Get a single image from the registry if it exists
+func (c *client) GetImage(repoImageTag string) (_ flux.ImageDescription, err error) {
+	defer func(start time.Time) {
+		c.Metrics.FetchDuration.With(
+			LabelRepository, repoImageTag,
+			fluxmetrics.LabelSuccess, strconv.FormatBool(err == nil),
+		).Observe(time.Since(start).Seconds())
+	}(time.Now())
+
+	id := flux.ParseImageID(repoImageTag)
+	repository := id.Repository()
+	_, _, tag := id.Components()
+
+	host, hostlessImageName, err := c.parseHost(repository)
+	if err != nil {
+		return
+	}
+
+	client, _, err := c.newRegistryClient(host)
+	if err != nil {
+		return
+	}
+
+	return c.lookupImage(client, hostlessImageName, repository, tag)
+}
+
+func (c *client) newRegistryClient(host string) (client *dockerregistry.Registry, cancel context.CancelFunc, err error) {
+	httphost := "https://" + host
+
+	// quay.io wants us to use cookies for authorisation, so we have
+	// to construct one (the default client has none). This means a
+	// bit more constructing things to be able to make a registry
+	// client literal, rather than calling .New()
+	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
+	if err != nil {
+		return
+	}
+	auth := c.Credentials.credsFor(host)
+
+	// A context we'll use to cancel requests on error
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Use the wrapper to fix headers for quay.io, and remember bearer tokens
+	var transport http.RoundTripper = &wwwAuthenticateFixer{transport: http.DefaultTransport}
+	// Now the auth-handling wrappers that come with the library
+	transport = dockerregistry.WrapTransport(transport, httphost, auth.username, auth.password)
+
+	client = &dockerregistry.Registry{
+		URL: httphost,
+		Client: &http.Client{
+			Transport: roundtripperFunc(func(r *http.Request) (*http.Response, error) {
+				return transport.RoundTrip(r.WithContext(ctx))
+			}),
+			Jar: jar,
+		},
+		Logf: dockerregistry.Quiet,
+	}
+	return
+}
+
+// TODO: This should be in a generic image parsing class with all the other image parsers
+func (c *client) parseHost(repository string) (string, string, error) {
+	var host, org, image string
+	parts := strings.Split(repository, "/")
+	switch len(parts) {
+	case 1:
+		host = dockerHubHost
+		org = dockerHubLibrary
+		image = parts[0]
+	case 2:
+		host = dockerHubHost
+		org = parts[0]
+		image = parts[1]
+	case 3:
+		host = parts[0]
+		org = parts[1]
+		image = parts[2]
+	default:
+		return "", "", fmt.Errorf(`expected image name as either "<host>/<org>/<image>", "<org>/<image>", or "<image>"`)
+	}
+
+	hostlessImageName := fmt.Sprintf("%s/%s", org, image)
+	return host, hostlessImageName, nil
 }
 
 func (c *client) lookupImage(client *dockerregistry.Registry, lookupName, imageName, tag string) (flux.ImageDescription, error) {

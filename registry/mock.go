@@ -17,3 +17,7 @@ func NewMockRegistry(descriptions []flux.ImageDescription, err error) Client {
 func (r *mockRegistry) GetRepository(repository string) ([]flux.ImageDescription, error) {
 	return r.descriptions, r.err
 }
+
+func (r *mockRegistry) GetImage(repository string) (flux.ImageDescription, error) {
+	return r.descriptions[0], r.err
+}
