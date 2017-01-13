@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -13,7 +12,6 @@ import (
 	dockerregistry "github.com/heroku/docker-registry-client/registry"
 
 	"github.com/weaveworks/flux"
-	fluxmetrics "github.com/weaveworks/flux/metrics"
 )
 
 // The remote interface represents calls to a remote registry
@@ -111,13 +109,7 @@ func (c *remote) lookupImage(client *dockerregistry.Registry, lookupName, imageN
 	id := flux.MakeImageID("", imageName, tag)
 	img := flux.ImageDescription{ID: id}
 
-	start := time.Now()
 	meta, err := client.Manifest(lookupName, tag)
-	c.metrics.RequestDuration.With(
-		LabelRepository, imageName,
-		LabelRequestKind, RequestKindMetadata,
-		fluxmetrics.LabelSuccess, strconv.FormatBool(err == nil),
-	).Observe(time.Since(start).Seconds())
 	if err != nil {
 		return img, err
 	}

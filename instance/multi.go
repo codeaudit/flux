@@ -43,11 +43,15 @@ func (m *MultitenantInstancer) Get(instanceID flux.InstanceID) (*Instance, error
 	if err != nil {
 		return nil, errors.Wrap(err, "decoding registry credentials")
 	}
-	regClient := registry.NewClient(
-		creds,
-		log.NewContext(instanceLogger).With("component", "registry"),
-		m.RegistryMetrics.WithInstanceID(instanceID),
-	)
+	var regClient registry.Client
+	{
+		regClient = registry.NewClient(
+			creds,
+			log.NewContext(instanceLogger).With("component", "registry"),
+			m.RegistryMetrics.WithInstanceID(instanceID),
+		)
+		regClient = registry.NewRegistryMonitoringMiddleware(m.RegistryMetrics.WithInstanceID(instanceID))(regClient)
+	}
 
 	repo := gitRepoFromSettings(c.Settings)
 

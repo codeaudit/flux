@@ -2,14 +2,9 @@
 package registry
 
 import (
-	"sort"
-	"strconv"
-	"time"
-
 	"github.com/go-kit/kit/log"
-
 	"github.com/weaveworks/flux"
-	fluxmetrics "github.com/weaveworks/flux/metrics"
+	"sort"
 )
 
 // Client is a handle to a bunch of registries.
@@ -43,26 +38,18 @@ func NewClient(c Credentials, l log.Logger, m Metrics) Client {
 //   quay.io/foo/helloworld -> quay.io/foo/helloworld
 //
 func (c *client) GetRepository(repository string) (_ []flux.ImageDescription, err error) {
-	defer func(start time.Time) {
-		c.Metrics.FetchDuration.With(
-			LabelRepository, repository,
-			fluxmetrics.LabelSuccess, strconv.FormatBool(err == nil),
-		).Observe(time.Since(start).Seconds())
-	}(time.Now())
-
 	id := flux.ParseImageID(repository)
 	remoteClient, err := NewRemoteClient(c.Credentials, id)
 	if err != nil {
 		return
 	}
-	remote := NewRemote(remoteClient, id, c.Logger, c.Metrics)
-	start := time.Now()
+	var remote Remote
+	{
+		remote = NewRemote(remoteClient, id, c.Logger, c.Metrics)
+		remote = NewRemoteMonitoringMiddleware(c.Metrics, id)(remote)
+	}
+
 	tags, err := remote.Tags()
-	c.Metrics.RequestDuration.With(
-		LabelRepository, repository,
-		LabelRequestKind, RequestKindTags,
-		fluxmetrics.LabelSuccess, strconv.FormatBool(err == nil),
-	).Observe(time.Since(start).Seconds())
 	if err != nil {
 		remote.Cancel()
 		return nil, err
@@ -78,18 +65,16 @@ func (c *client) GetRepository(repository string) (_ []flux.ImageDescription, er
 
 // Get a single image from the registry if it exists
 func (c *client) GetImage(repoImageTag string) (_ flux.ImageDescription, err error) {
-	defer func(start time.Time) {
-		c.Metrics.FetchDuration.With(
-			LabelRepository, repoImageTag,
-			fluxmetrics.LabelSuccess, strconv.FormatBool(err == nil),
-		).Observe(time.Since(start).Seconds())
-	}(time.Now())
 	id := flux.ParseImageID(repoImageTag)
 	remoteClient, err := NewRemoteClient(c.Credentials, id)
 	if err != nil {
 		return
 	}
-	remote := NewRemote(remoteClient, id, c.Logger, c.Metrics)
+	var remote Remote
+	{
+		remote = NewRemote(remoteClient, id, c.Logger, c.Metrics)
+		remote = NewRemoteMonitoringMiddleware(c.Metrics, id)(remote)
+	}
 
 	return remote.Lookup()
 }
