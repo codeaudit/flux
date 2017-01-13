@@ -3,10 +3,8 @@ package registry
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	dockerregistry "github.com/heroku/docker-registry-client/registry"
 	"github.com/weaveworks/flux"
-	"strings"
 	"time"
 )
 
@@ -21,7 +19,7 @@ type remoteClient struct {
 	cancel context.CancelFunc
 }
 
-func NewRemoteClient(client *dockerregistry.Registry, cancel context.CancelFunc) (_ RemoteClient, err error) {
+func newRemoteClient(client *dockerregistry.Registry, cancel context.CancelFunc) (_ RemoteClient, err error) {
 	return &remoteClient{
 		client: client,
 		cancel: cancel,
@@ -29,11 +27,7 @@ func NewRemoteClient(client *dockerregistry.Registry, cancel context.CancelFunc)
 }
 
 func (rc *remoteClient) Tags(id flux.ImageID) (_ []string, err error) {
-	_, hostlessImageName, err := parseHost(string(id))
-	if err != nil {
-		return
-	}
-	return rc.client.Tags(hostlessImageName)
+	return rc.client.Tags(id.Name())
 }
 
 func (rc *remoteClient) Manifest(id flux.ImageID) (flux.ImageDescription, error) {
@@ -63,29 +57,4 @@ func (rc *remoteClient) Manifest(id flux.ImageID) (flux.ImageDescription, error)
 
 func (rc *remoteClient) Cancel() {
 	rc.cancel()
-}
-
-// TODO: This should be in a generic image parsing class with all the other image parsers
-func parseHost(repository string) (string, string, error) {
-	var host, org, image string
-	parts := strings.Split(repository, "/")
-	switch len(parts) {
-	case 1:
-		host = dockerHubHost
-		org = dockerHubLibrary
-		image = parts[0]
-	case 2:
-		host = dockerHubHost
-		org = parts[0]
-		image = parts[1]
-	case 3:
-		host = parts[0]
-		org = parts[1]
-		image = parts[2]
-	default:
-		return "", "", fmt.Errorf(`expected image name as either "<host>/<org>/<image>", "<org>/<image>", or "<image>"`)
-	}
-
-	hostlessImageName := fmt.Sprintf("%s/%s", org, image)
-	return host, hostlessImageName, nil
 }

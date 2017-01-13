@@ -17,11 +17,6 @@ import (
 	"github.com/weaveworks/flux"
 )
 
-const (
-	dockerHubHost    = "index.docker.io"
-	dockerHubLibrary = "library"
-)
-
 type creds struct {
 	username, password string
 }
@@ -46,18 +41,11 @@ type remoteClientFactory struct {
 }
 
 func (f *remoteClientFactory) Create(id flux.ImageID) (_ RemoteClient, err error) {
-	repository := id.Repository()
-
-	host, _, err := parseHost(repository)
+	client, cancel, err := newRegistryClient(id.Host(), f.creds)
 	if err != nil {
 		return
 	}
-
-	client, cancel, err := newRegistryClient(host, f.creds)
-	if err != nil {
-		return
-	}
-	return NewRemoteClient(client, cancel)
+	return newRemoteClient(client, cancel)
 }
 
 func newRegistryClient(host string, creds Credentials) (client *dockerregistry.Registry, cancel context.CancelFunc, err error) {

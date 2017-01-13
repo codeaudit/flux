@@ -147,6 +147,12 @@ func (ids ServiceIDs) Intersection(others ServiceIDSet) ServiceIDSet {
 	return set.Intersection(others)
 }
 
+// Todo: Move ImageID into separate library. It's used all over the place.
+const (
+	dockerHubHost    = "index.docker.io"
+	dockerHubLibrary = "library"
+)
+
 type ImageID string // "quay.io/weaveworks/helloworld:v1"
 
 func ParseImageID(s string) ImageID {
@@ -193,6 +199,22 @@ func (id ImageID) Repository() string {
 		return name
 	}
 	return ""
+}
+
+func (id ImageID) Host() string {
+	host, _, _ := id.Components()
+	if host == "" {
+		return dockerHubHost
+	}
+	return host
+}
+
+func (id ImageID) Name() string {
+	_, name, _ := id.Components()
+	if name == "" {
+		return dockerHubLibrary
+	}
+	return name
 }
 
 type ServiceSpec string // ServiceID or "<all>"
