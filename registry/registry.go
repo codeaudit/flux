@@ -15,17 +15,17 @@ type Client interface {
 
 // client is a handle to a registry.
 type client struct {
-	Credentials Credentials
-	Logger      log.Logger
-	Metrics     Metrics
+	factory RemoteClientFactory
+	Logger  log.Logger
+	Metrics Metrics
 }
 
 // NewClient creates a new registry client, to use when fetching repositories.
-func NewClient(c Credentials, l log.Logger, m Metrics) Client {
+func NewClient(c RemoteClientFactory, l log.Logger, m Metrics) Client {
 	return &client{
-		Credentials: c,
-		Logger:      l,
-		Metrics:     m,
+		factory: c,
+		Logger:  l,
+		Metrics: m,
 	}
 }
 
@@ -39,7 +39,7 @@ func NewClient(c Credentials, l log.Logger, m Metrics) Client {
 //
 func (c *client) GetRepository(repository string) (_ []flux.ImageDescription, err error) {
 	id := flux.ParseImageID(repository)
-	remoteClient, err := NewRemoteClient(c.Credentials, id)
+	remoteClient, err := c.factory.Create(id)
 	if err != nil {
 		return
 	}
@@ -66,7 +66,7 @@ func (c *client) GetRepository(repository string) (_ []flux.ImageDescription, er
 // Get a single image from the registry if it exists
 func (c *client) GetImage(repoImageTag string) (_ flux.ImageDescription, err error) {
 	id := flux.ParseImageID(repoImageTag)
-	remoteClient, err := NewRemoteClient(c.Credentials, id)
+	remoteClient, err := c.factory.Create(id)
 	if err != nil {
 		return
 	}

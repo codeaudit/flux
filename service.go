@@ -164,6 +164,11 @@ func MakeImageID(registry, name, tag string) ImageID {
 	return ImageID(result)
 }
 
+func (id ImageID) WithTag(tag string) ImageID {
+	r, n, _ := id.Components()
+	return MakeImageID(r, n, tag)
+}
+
 func (id ImageID) Components() (registry, name, tag string) {
 	s := string(id)
 	toks := strings.SplitN(s, "/", 3)

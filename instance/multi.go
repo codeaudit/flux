@@ -46,7 +46,7 @@ func (m *MultitenantInstancer) Get(instanceID flux.InstanceID) (*Instance, error
 	var regClient registry.Client
 	{
 		regClient = registry.NewClient(
-			creds,
+			registry.NewRemoteClientFactory(creds),
 			log.NewContext(instanceLogger).With("component", "registry"),
 			m.RegistryMetrics.WithInstanceID(instanceID),
 		)
